@@ -198,3 +198,21 @@ This product uses the TMDb API, but is not endorsed or certified by TMDb.
 This product uses the Trakt.tv API.
 
 [LICENSE](LICENSE)
+
+### PopcornMovies experimental Firefox build (0.10.2)
+
+Enable PopcornMovies in the extension options and grant its site permission.
+This adapter reads finite HTML video playback on the page or in same-origin
+frames, and matches movie titles from the page heading. TV playback requires
+explicit `season` and `episode` URL parameters or `/tv/ID/SEASON/EPISODE` paths.
+Cross-origin embedded providers are not supported. Login and movie scrobbling
+were confirmed in Zen with Heart of the Beast appearing as Now Playing in Trakt.
+Completed-watch history and TV episode detection remain unverified.
+
+Build with `pnpm install --frozen-lockfile` and `pnpm build`. For temporary Firefox
+installation, open `about:debugging#/runtime/this-firefox`, choose Load Temporary
+Add-on, and select `build/firefox/manifest.json`. Release installation requires
+Mozilla signing. Configure `TRAKT_CLIENT_ID` in `.env` before building.
+
+The custom build uses PKCE login with `TRAKT_CLIENT_ID` from `.env`; no Client
+Secret is needed. Register `https://trakt.tv/apps` as the redirect URI.

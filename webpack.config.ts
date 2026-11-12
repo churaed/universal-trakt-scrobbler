@@ -321,10 +321,10 @@ const getManifest = (browserName: string, isDev: boolean): string => {
 			// Uncomment this to connect to react-devtools
 			// manifest.content_security_policy =
 			// 	"script-src 'self' http://localhost:8097; object-src 'self'";
-			if (process.env.FIREFOX_EXTENSION_ID) {
+			{
 				manifest.browser_specific_settings = {
 					gecko: {
-						id: process.env.FIREFOX_EXTENSION_ID,
+						id: process.env.FIREFOX_EXTENSION_ID || 'universal-trakt-scrobbler@local.personal',
 					},
 				};
 			}

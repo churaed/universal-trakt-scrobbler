@@ -43,5 +43,6 @@
 			"@/*": ["./src/services/*", "./src/*"]
 		},
 		"esModuleInterop": true
-	}
+	},
+	"exclude": ["node_modules", "build", "dist"]
 }

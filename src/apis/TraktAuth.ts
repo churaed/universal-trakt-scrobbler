@@ -9,6 +9,7 @@ import browser from 'webextension-polyfill';
 export type TraktManualAuth = {
 	callback?: PromiseResolve<TraktAuthDetails>;
 	state?: string;
+	verifier?: string;
 	tabId?: number;
 };
 
@@ -37,16 +38,14 @@ class _TraktAuth extends TraktApi {
 		return Shared.browser === 'firefox' ? !!Shared.storage.options.grantCookies : false;
 	}
 
-	getAuthorizeUrl(state: string): string {
+	getAuthorizeUrl(state: string, challenge = ''): string {
 		return `${this.AUTHORIZE_URL}?response_type=code&client_id=${
 			Shared.clientId
-		}&redirect_uri=${this.getRedirectUrl()}&state=${encodeURIComponent(state)}`;
+		}&redirect_uri=${this.getRedirectUrl()}&state=${encodeURIComponent(state)}&code_challenge=${challenge}&code_challenge_method=S256`;
 	}
 
 	getRedirectUrl(): string {
-		return this.isIdentityAvailable && !this.requiresCookies()
-			? browser.identity.getRedirectURL()
-			: this.REDIRECT_URL;
+		return this.REDIRECT_URL;
 	}
 
 	getCode(redirectUrl: string): string {
@@ -81,27 +80,19 @@ class _TraktAuth extends TraktApi {
 	}
 
 	async startIdentityAuth(): Promise<TraktAuthDetails> {
-		const state = this.createState();
-		let redirectUrl: string;
-		try {
-			redirectUrl = await browser.identity.launchWebAuthFlow({
-				url: this.getAuthorizeUrl(state),
-				interactive: true,
-			});
-		} catch (_err) {
-			this.isIdentityAvailable = false;
-			return new Promise<TraktAuthDetails>((resolve) => void this.startManualAuth(resolve));
-		}
-		if (this.getState(redirectUrl) !== state) {
-			throw new Error('Trakt OAuth state mismatch.');
-		}
-		return this.getToken(redirectUrl);
+		return new Promise<TraktAuthDetails>((resolve) => void this.startManualAuth(resolve));
 	}
 
 	async startManualAuth(callback: PromiseResolve<TraktAuthDetails>): Promise<void> {
 		const state = this.createState();
-		this.manualAuth = { callback, state };
-		const tab = await Tabs.open(this.getAuthorizeUrl(state));
+		const verifier = this.createState();
+		const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+		const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_')
+			.replace(/=+$/, '');
+		this.manualAuth = { callback, state, verifier };
+		const tab = await Tabs.open(this.getAuthorizeUrl(state, challenge));
 		// A newer login can replace manualAuth while the tab is opening; do not attach a stale tab.
 		if (tab && this.manualAuth.state === state) {
 			this.manualAuth.tabId = tab.id;
@@ -109,10 +100,10 @@ class _TraktAuth extends TraktApi {
 	}
 
 	async finishManualAuth(redirectUrl: string): Promise<void> {
-		const { callback, state, tabId } = this.manualAuth;
+		const { callback, state, tabId, verifier } = this.manualAuth;
 		// trakt.js also runs on app.trakt.tv, whose own login callbacks can contain a code.
 		// Only exchange it when it belongs to the pending extension login.
-		if (!callback || this.getState(redirectUrl) !== state) {
+		if (!callback || !verifier || this.getState(redirectUrl) !== state) {
 			return;
 		}
 		// Consume the state before async work so a duplicate callback cannot reuse it.
@@ -121,15 +112,15 @@ class _TraktAuth extends TraktApi {
 		if (typeof tabId !== 'undefined') {
 			await browser.tabs.remove(tabId);
 		}
-		const auth = await this.getToken(redirectUrl);
+		const auth = await this.getToken(redirectUrl, verifier);
 		callback(auth);
 	}
 
-	getToken(redirectUrl: string): Promise<TraktAuthDetails> {
+	getToken(redirectUrl: string, verifier: string): Promise<TraktAuthDetails> {
 		return this.requestToken({
 			code: this.getCode(redirectUrl),
 			client_id: Shared.clientId,
-			client_secret: Shared.clientSecret,
+			code_verifier: verifier,
 			redirect_uri: this.getRedirectUrl(),
 			grant_type: 'authorization_code',
 		});
@@ -139,7 +130,6 @@ class _TraktAuth extends TraktApi {
 		return this.requestToken({
 			refresh_token: refreshToken,
 			client_id: Shared.clientId,
-			client_secret: Shared.clientSecret,
 			redirect_uri: this.getRedirectUrl(),
 			grant_type: 'refresh_token',
 		});
@@ -177,7 +167,6 @@ class _TraktAuth extends TraktApi {
 			body: {
 				access_token: values.auth?.access_token,
 				client_id: Shared.clientId,
-				client_secret: Shared.clientSecret,
 			},
 		});
 		await Shared.storage.remove('auth', true);
