@@ -244,10 +244,14 @@ class _EventDispatcher {
 			switch (Shared.pageType) {
 				case 'background':
 				case 'popup':
-					void Messaging.toAllContent(message);
+					void Messaging.toAllContent(message).catch((err) =>
+						Shared.errors.warning('Failed to broadcast event.', err)
+					);
 				// falls through
 				case 'content':
-					void Messaging.toExtension(message);
+					void Messaging.toExtension(message).catch((err) =>
+						Shared.errors.warning('Failed to broadcast event.', err)
+					);
 					break;
 			}
 		}

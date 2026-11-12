@@ -260,6 +260,11 @@ class _Messaging {
 			response = ((await browser.runtime.sendMessage(message)) ?? null) as ReturnType<T>;
 		} catch (err) {
 			if (err instanceof Error) {
+				if (
+					message.action === 'dispatch-event' &&
+					err.message.includes('Receiving end does not exist')
+				)
+					return response;
 				let messagingError;
 				try {
 					messagingError = JSON.parse(err.message) as MessagingError;
@@ -302,7 +307,12 @@ class _Messaging {
 		const values = await SessionStorage.get('injectedContentScriptTabs');
 		const injectedContentScriptTabs = new Set(values.injectedContentScriptTabs ?? []);
 		for (const tabId of injectedContentScriptTabs) {
-			await this.toContent(message, tabId);
+			try {
+				await this.toContent(message, tabId);
+			} catch (err) {
+				if (!(err instanceof Error) || !err.message.includes('Receiving end does not exist'))
+					throw err;
+			}
 		}
 	}
 }

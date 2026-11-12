@@ -63,6 +63,10 @@ class _TmdbApi {
 	private config?: TmdbApiConfig | null;
 
 	private async activate(): Promise<void> {
+		if (!Shared.tmdbApiKey) {
+			this.config = null;
+			return;
+		}
 		const cache = await Cache.get('tmdbApiConfigs');
 		const config = cache.get('default');
 		if (typeof config !== 'undefined') {
@@ -243,6 +247,7 @@ class _TmdbApi {
 		year?: number,
 		serviceId?: string
 	): Promise<TmdbTvSearchResult | null> {
+		if (!Shared.tmdbApiKey) return null;
 		try {
 			const url = `${this.API_URL}/search/tv?api_key=${Shared.tmdbApiKey}&query=${encodeURIComponent(title)}`;
 
@@ -309,6 +314,7 @@ class _TmdbApi {
 		tmdbShowId: number,
 		episodeTitle: string
 	): Promise<{ season: number; episode: number } | null> {
+		if (!Shared.tmdbApiKey) return null;
 		try {
 			// Get all seasons for the show
 			const url = `${this.API_URL}/tv/${tmdbShowId}?api_key=${Shared.tmdbApiKey}`;

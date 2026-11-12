@@ -204,7 +204,7 @@ This product uses the Trakt.tv API.
 Enable PopcornMovies in the extension options and grant its site permission.
 This adapter reads finite HTML video playback on the page or in same-origin
 frames, and matches movie titles from the page heading. TV playback requires
-explicit `season` and `episode` URL parameters or `/tv/ID/SEASON/EPISODE` paths.
+explicit `season`/`episode` or `s`/`e` URL parameters or `/tv/ID/SEASON/EPISODE` paths.
 Cross-origin embedded providers are not supported. Login and movie scrobbling
 were confirmed in Zen with Heart of the Beast appearing as Now Playing in Trakt.
 Completed-watch history and TV episode detection remain unverified.

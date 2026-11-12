@@ -57,8 +57,8 @@ class _PopcornmoviesParser extends ScrobbleParser {
 		if (movie) return new MovieItem({ serviceId, title });
 		const params = new URLSearchParams(window.location.search);
 		const route = /\/tv\/\d+\/(\d+)\/(\d+)/.exec(path);
-		const season = Number(params.get('season') ?? route?.[1]);
-		const number = Number(params.get('episode') ?? route?.[2]);
+		const season = Number(params.get('season') ?? params.get('s') ?? route?.[1]);
+		const number = Number(params.get('episode') ?? params.get('e') ?? route?.[2]);
 		if (!Number.isInteger(season) || season < 0 || !Number.isInteger(number) || number < 1)
 			return null;
 		return new EpisodeItem({ serviceId, title: '', season, number, show: { serviceId, title } });
